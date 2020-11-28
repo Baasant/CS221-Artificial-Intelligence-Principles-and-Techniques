@@ -1,4 +1,3 @@
-
 import os, random, operator, sys
 from collections import Counter
 
@@ -11,7 +10,7 @@ def dotProduct(d1, d2):
     if len(d1) < len(d2):
         return dotProduct(d2, d1)
     else:
-        return sum(d1.get(f, 0) * v for f, v in list(d2.items()))
+        return sum(d1.get(f, 0) * v for f, v in d2.items())
 
 def increment(d1, scale, d2):
     """
@@ -20,7 +19,7 @@ def increment(d1, scale, d2):
     @param float scale
     @param dict d2: a feature vector.
     """
-    for f, v in list(d2.items()):
+    for f, v in d2.items():
         d1[f] = d1.get(f, 0) + v * scale
 
 def readExamples(path):
@@ -28,13 +27,11 @@ def readExamples(path):
     Reads a set of training examples.
     '''
     examples = []
-    for line in open(path, "rb"):
-        # TODO -- change these files to utf-8.
-        line = line.decode('latin-1')
+    for line in open(path):
         # Format of each line: <output label (+1 or -1)> <input sentence>
         y, x = line.split(' ', 1)
         examples.append((x.strip(), int(y)))
-    print('Read %d examples from %s' % (len(examples), path))
+    print 'Read %d examples from %s' % (len(examples), path)
     return examples
 
 def evaluatePredictor(examples, predictor):
@@ -50,33 +47,33 @@ def evaluatePredictor(examples, predictor):
     return 1.0 * error / len(examples)
 
 def outputWeights(weights, path):
-    print("%d weights" % len(weights))
+    print "%d weights" % len(weights)
     out = open(path, 'w')
-    for f, v in sorted(list(weights.items()), key=lambda f_v : -f_v[1]):
-        print('\t'.join([f, str(v)]), file=out)
+    for f, v in sorted(weights.items(), key=lambda (f, v) : -v):
+        print >>out, '\t'.join([f, str(v)])
     out.close()
 
 def verbosePredict(phi, y, weights, out):
     yy = 1 if dotProduct(phi, weights) >= 0 else -1
     if y:
-        print('Truth: %s, Prediction: %s [%s]' % (y, yy, 'CORRECT' if y == yy else 'WRONG'), file=out)
+        print >>out, 'Truth: %s, Prediction: %s [%s]' % (y, yy, 'CORRECT' if y == yy else 'WRONG')
     else:
-        print('Prediction:', yy, file=out)
-    for f, v in sorted(list(phi.items()), key=lambda f_v1 : -f_v1[1] * weights.get(f_v1[0], 0)):
+        print >>out, 'Prediction:', yy
+    for f, v in sorted(phi.items(), key=lambda (f, v) : -v * weights.get(f, 0)):
         w = weights.get(f, 0)
-        print("%-30s%s * %s = %s" % (f, v, w, v * w), file=out)
+        print >>out, "%-30s%s * %s = %s" % (f, v, w, v * w)
     return yy
 
 def outputErrorAnalysis(examples, featureExtractor, weights, path):
     out = open('error-analysis', 'w')
     for x, y in examples:
-        print('===', x, file=out)
+        print >>out, '===', x
         verbosePredict(featureExtractor(x), y, weights, out)
     out.close()
 
 def interactivePrompt(featureExtractor, weights):
     while True:
-        print('> ', end=' ')
+        print '> ',
         x = sys.stdin.readline()
         if not x: break
         phi = featureExtractor(x) 
@@ -122,16 +119,16 @@ def outputClusters(path, examples, centers, assignments):
     '''
     Output the clusters to the given path.
     '''
-    print('Outputting clusters to %s' % path)
+    print 'Outputting clusters to %s' % path
     out = open(path, 'w')
     for j in range(len(centers)):
-        print('====== Cluster %s' % j, file=out)
-        print('--- Centers:', file=out)
-        for k, v in sorted(list(centers[j].items()), key = lambda k_v : -k_v[1]):
+        print >>out, '====== Cluster %s' % j
+        print >>out, '--- Centers:'
+        for k, v in sorted(centers[j].items(), key = lambda (k,v) : -v):
             if v != 0:
-                print('%s\t%s' % (k, v), file=out)
-        print('--- Assigned points:', file=out)
+                print >>out, '%s\t%s' % (k, v)
+        print >>out, '--- Assigned points:'
         for i, z in enumerate(assignments):
             if z == j:
-                print(' '.join(list(examples[i].keys())), file=out)
+                print >>out, ' '.join(examples[i].keys())
     out.close()

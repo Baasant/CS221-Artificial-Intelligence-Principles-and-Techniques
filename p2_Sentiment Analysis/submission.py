@@ -22,7 +22,10 @@ def extractWordFeatures(x):
     Example: "I am what I am" --> {'I': 2, 'am': 2, 'what': 1}
     """
     # BEGIN_YOUR_CODE (our solution is 4 lines of code, but don't worry if you deviate from this)
-    raise Exception("Not implemented yet")
+    wordDict=collections.defaultdict(float)
+    for word in x.split():
+        wordDict[word]+=1
+    return wordDict
     # END_YOUR_CODE
 
 ############################################################
@@ -43,7 +46,19 @@ def learnPredictor(trainExamples, testExamples, featureExtractor, numIters, eta)
     '''
     weights = {}  # feature => weight
     # BEGIN_YOUR_CODE (our solution is 12 lines of code, but don't worry if you deviate from this)
-    raise Exception("Not implemented yet")
+    def predict(x):
+        phi=featureExtractor(x)
+        if dotProduct(weights,phi)<0.0:
+            return -1
+        else:
+            return 1
+    for i in range(numIters):
+        for item in trainExamples:
+            x,y=item
+            phi=featureExtractor(x)
+            temp=dotProduct(weights,phi)*y
+            if temp < 1:increment(weights,-eta*-y,phi)
+        print("Iteration:%s, Training error:%s, Test error:%s"%(i,evaluatePredictor(trainExamples,predict),evaluatePredictor(testExamples,predict)))
     # END_YOUR_CODE
     return weights
 
@@ -62,7 +77,10 @@ def generateDataset(numExamples, weights):
     # y should be 1 or -1 as classified by the weight vector.
     def generateExample():
         # BEGIN_YOUR_CODE (our solution is 2 lines of code, but don't worry if you deviate from this)
-        raise Exception("Not implemented yet")
+        phi={}
+        for item in random.sample(list(weights),random.randint(1,len(weights))):
+            phi[item]=random.randint(1,100)
+        y=1 if dotProduct(weights,phi)>1 else 0
         # END_YOUR_CODE
         return (phi, y)
     return [generateExample() for _ in range(numExamples)]
@@ -73,13 +91,17 @@ def generateDataset(numExamples, weights):
 def extractCharacterFeatures(n):
     '''
     Return a function that takes a string |x| and returns a sparse feature
-    vector consisting of all n-grams of |x| without spaces mapped to their n-gram counts.
+    vector consisting of all n-grams of |x| without spaces.
     EXAMPLE: (n = 3) "I like tacos" --> {'Ili': 1, 'lik': 1, 'ike': 1, ...
     You may assume that n >= 1.
     '''
     def extract(x):
         # BEGIN_YOUR_CODE (our solution is 6 lines of code, but don't worry if you deviate from this)
-        raise Exception("Not implemented yet")
+        returnDict=collections.defaultdict(int)
+        x=x.replace(' ','')
+        for i in range(0,len(x)-(n-1)):
+            returnDict[x[i:i+n]]+=1
+        return returnDict
         # END_YOUR_CODE
     return extract
 
@@ -97,6 +119,53 @@ def kmeans(examples, K, maxIters):
             list of assignments (i.e. if examples[i] belongs to centers[j], then assignments[i] = j)
             final reconstruction loss)
     '''
-    # BEGIN_YOUR_CODE (our solution is 25 lines of code, but don't worry if you deviate from this)
-    raise Exception("Not implemented yet")
+    # BEGIN_YOUR_CODE (our solution is 32 lines of code, but don't worry if you deviate from this)
+    centroids=[sample.copy() for sample in random.sample(examples,K)]
+    bestmatch=[random.randint(0,K-1) for item in examples]
+    distances=[0 for item in examples]
+    pastmatches=None
+    examples_squared=[]
+    for item in examples:
+        tempdict=collections.defaultdict(float)
+        for k,v in item.items():
+            tempdict[k]=v*v
+        examples_squared.append(tempdict)
+    for run_range in range(maxIters):
+        centroids_squared=[]
+        for item in centroids:
+            tempdict = collections.defaultdict(float)
+            for k, v in item.items():
+                tempdict[k] = v * v
+            centroids_squared.append(tempdict)
+        for index,item in enumerate(examples):
+            min_distance=999999
+            for i,cluster in enumerate(centroids):
+                distance=sum(examples_squared[index].values())+sum(centroids_squared[i].values())
+                #for k in set(item.keys() & cluster.keys()):
+                for k in (item.viewkeys() & cluster.viewkeys()):
+                    distance+=-2*item[k]*cluster[k]
+                if distance<min_distance:
+                    min_distance=distance
+                    bestmatch[index]=i
+                    distances[index]=min_distance
+        if pastmatches==bestmatch:
+            break
+        else:
+            clustercounts=[0 for cluster in centroids]
+            for i,cluster in enumerate(centroids):
+                for k in cluster:
+                    cluster[k]=0.0
+            for index,item in enumerate(examples):
+                clustercounts[bestmatch[index]]+=1
+                cluster=centroids[bestmatch[index]]
+                for k,v in item.items():
+                    if k in cluster:
+                        cluster[k]+=v
+                    else:
+                        cluster[k]=0.0+v
+            for i, cluster in enumerate(centroids):
+                for k in cluster:
+                    cluster[k]/=clustercounts[i]
+            pastmatches=bestmatch[:]
+    return centroids,bestmatch,sum(distances)
     # END_YOUR_CODE
